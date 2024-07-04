@@ -21,8 +21,10 @@ export abstract class ExerciseRepository {
   abstract readExercises(
       userId: string,
       name?: string,
-      categoryId?: number
-  ): Promise<ExerciseEntity[] | CustomError>;
+      categoryId?: number,
+      page?: number,
+      pageSize?: number
+  ): Promise<{ exercises: ExerciseEntity[], totalItems: number }  | CustomError>;
   abstract readExercisesCategories(): Promise<
     ExerciseCategoryEntity[] | CustomError
   >;

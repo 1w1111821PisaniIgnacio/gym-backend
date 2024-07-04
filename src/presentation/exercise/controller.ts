@@ -89,12 +89,12 @@ export class ExerciseController {
   public readExercises = async (req: Request, res: Response) => {
     try {
       const { id } = req.body.user;
-      const { name, category } = req.query;
-
-      // Asumimos que category ya es un entero, si está presente
+      let { name, category, page, pageSize } = req.query;
       const categoryId = category !== undefined ? Number(category) : undefined;
+      const pageNumber = page !== undefined ? Number(page) : 1;
+      const pageSizeNumber = pageSize !== undefined ? Number(pageSize) : 10;
 
-      const exercises = await this.exerciseRepository.readExercises(id, name as string, categoryId);
+      const exercises = await this.exerciseRepository.readExercises(id, name as string, categoryId, pageNumber, pageSizeNumber);
 
       return res.status(200).json(exercises);
     } catch (error) {
@@ -102,6 +102,7 @@ export class ExerciseController {
       this.handleError(error, res);
     }
   };
+
   public readExercisesCategories = async (req: Request, res: Response) => {
     try {
       const exercisesCategoriesList =

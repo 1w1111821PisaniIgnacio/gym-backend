@@ -5,7 +5,7 @@ import {
   exercisesDescriptions,
 } from "../../db/schemas";
 import { CreateExerciseDescriptionDto } from "../../../domain/dtos/exercise/create-exercise-description.dto";
-import { and, eq, ilike, isNull, or } from "drizzle-orm";
+import {and, count, eq, ilike, isNull, or} from "drizzle-orm";
 import { ExerciseDescriptionEntity } from "../../../domain/entities/exercise/exercise-description.entity";
 import { ExerciseCategoryEntity } from "../../../domain/entities/exercise/exercise-category.entity";
 import { ExerciseRepository } from "../../../domain/repositories/exercise/exercise.repository";
@@ -113,75 +113,99 @@ export class ExerciseRepositoryImpl implements ExerciseRepository {
       throw CustomError.internalServer();
     }
   }
-  async readExercises(
-      userId: string,
-      name?: string,
-      categoryId?: number
-  ): Promise<ExerciseEntity[] | CustomError> {
-    try {
-      // Construir las condiciones dinámicas
-      const conditions: any[] = [
-        or(isNull(exercises.userId), eq(exercises.userId, userId))
-      ];
 
-      if (name) {
-        conditions.push(
-            or(
-                ilike(exercises.name, `%${name}%`),
-                ilike(variants.name, `%${name}%`)
-            )
-        );
-      }
+    async readExercises(
+        userId: string,
+        name?: string,
+        categoryId?: number,
+        page?: number,
+        pageSize?: number
+    ): Promise<{ exercises: ExerciseEntity[], totalItems: number } | CustomError> {
+        try {
+            // Construir las condiciones dinámicas
+            const conditions: any[] = [
+                or(isNull(exercises.userId), eq(exercises.userId, userId))
+            ];
 
-      if (categoryId !== undefined) {
-        conditions.push(eq(exercises.categoryId, categoryId));
-      }
+            if (name) {
+                conditions.push(
+                    or(
+                        ilike(exercises.name, `%${name}%`),
+                        ilike(variants.name, `%${name}%`)
+                    )
+                );
+            }
 
-      const exercisesList = await db
-          .select({
-            main: exercises,
-            variant: variants,
-            category: exercisesCategories,
-            user: exercises.userId,
-          })
-          .from(exercises)
-          .leftJoin(
-              exercisesCategories,
-              eq(exercisesCategories.id, exercises.categoryId)
-          )
-          .leftJoin(
-              variants,
-              and(
-                  eq(variants.exerciseId, exercises.id),
-                  eq(variants.userId, userId)
-              )
-          )
-          .where(and(...conditions));
+            if (categoryId !== undefined) {
+                conditions.push(eq(exercises.categoryId, categoryId));
+            }
 
-      // Mapear los resultados a las entidades correspondientes
-      return exercisesList.map((exercise) =>
-          ExerciseEntity.create({
-            ...exercise.main,
-            variant: exercise.variant
-                ? VariantEntity.create({
-                  ...exercise.variant,
-                  category: ExerciseCategoryEntity.create(exercise.category!),
+            // Calcular el offset para la paginación
+            const offset = ((page ?? 1) - 1) * (pageSize ?? 10);
+
+            // Obtener el total de ejercicios
+            const totalItemsResult = await
+            db. select({ value: count() }).from(exercises)
+                .where(and(...conditions));
+
+            const totalItems = Number(totalItemsResult[0].value);
+
+
+            // Obtener los ejercicios paginados
+            const exercisesList = await db
+                .select({
+                    main: exercises,
+                    variant: variants,
+                    category: exercisesCategories,
+                    user: exercises.userId,
                 })
-                : null,
-            category: ExerciseCategoryEntity.create(exercise.category!),
-            hasUser: Boolean(exercise.user),
-          })
-      );
-    } catch (error: unknown) {
-      console.log(error);
-      if (error instanceof CustomError) {
-        throw error;
-      }
-      throw CustomError.internalServer();
-    }
-  }
+                .from(exercises)
+                .leftJoin(
+                    exercisesCategories,
+                    eq(exercisesCategories.id, exercises.categoryId)
+                )
+                .leftJoin(
+                    variants,
+                    and(
+                        eq(variants.exerciseId, exercises.id),
+                        eq(variants.userId, userId)
+                    )
+                )
+                .where(and(...conditions))
+                .limit(pageSize ?? 10)
+                .offset(offset);
 
-  async readExercisesCategories(): Promise<
+            // Mapear los resultados a las entidades correspondientes
+            const exercisesEntities = exercisesList.map((exercise) =>
+                ExerciseEntity.create({
+                    ...exercise.main,
+                    variant: exercise.variant
+                        ? VariantEntity.create({
+                            ...exercise.variant,
+                            category: ExerciseCategoryEntity.create(exercise.category!),
+                        })
+                        : null,
+                    category: ExerciseCategoryEntity.create(exercise.category!),
+                    hasUser: Boolean(exercise.user),
+                })
+            );
+
+            // Devolver los ejercicios paginados y el total de elementos
+            return {
+                exercises: exercisesEntities,
+                totalItems: totalItems
+            };
+        } catch (error: unknown) {
+            console.log(error);
+            if (error instanceof CustomError) {
+                throw error;
+            }
+            throw CustomError.internalServer();
+        }
+    }
+
+
+    async readExercisesCategories(): Promise<
     ExerciseCategoryEntity[] | CustomError
   > {
     try {

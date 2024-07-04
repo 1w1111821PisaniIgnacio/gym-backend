@@ -114,51 +114,63 @@ export class ExerciseRepositoryImpl implements ExerciseRepository {
     }
   }
   async readExercises(
-    userId: string,
-    name?: string
+      userId: string,
+      name?: string,
+      categoryId?: number
   ): Promise<ExerciseEntity[] | CustomError> {
     try {
-      const exercisesList = await db
-        .select({
-          main: exercises,
-          variant: variants,
-          category: exercisesCategories,
-          user: exercises.userId,
-        })
-        .from(exercises)
-        .leftJoin(
-          exercisesCategories,
-          eq(exercisesCategories.id, exercises.categoryId)
-        )
-        .leftJoin(
-          variants,
-          and(
-            eq(variants.exerciseId, exercises.id),
-            eq(variants.userId, userId)
-          )
-        )
-        .where(
-          and(
-            or(
-              name ? ilike(exercises.name, `%${name}%`) : undefined,
-              name ? ilike(variants.name, `%${name}%`) : undefined
-            ),
-            or(isNull(exercises.userId), eq(exercises.userId, userId))
-          )
-        );
+      // Construir las condiciones dinámicas
+      const conditions: any[] = [
+        or(isNull(exercises.userId), eq(exercises.userId, userId))
+      ];
 
+      if (name) {
+        conditions.push(
+            or(
+                ilike(exercises.name, `%${name}%`),
+                ilike(variants.name, `%${name}%`)
+            )
+        );
+      }
+
+      if (categoryId !== undefined) {
+        conditions.push(eq(exercises.categoryId, categoryId));
+      }
+
+      const exercisesList = await db
+          .select({
+            main: exercises,
+            variant: variants,
+            category: exercisesCategories,
+            user: exercises.userId,
+          })
+          .from(exercises)
+          .leftJoin(
+              exercisesCategories,
+              eq(exercisesCategories.id, exercises.categoryId)
+          )
+          .leftJoin(
+              variants,
+              and(
+                  eq(variants.exerciseId, exercises.id),
+                  eq(variants.userId, userId)
+              )
+          )
+          .where(and(...conditions));
+
+      // Mapear los resultados a las entidades correspondientes
       return exercisesList.map((exercise) =>
-        ExerciseEntity.create({
-          ...exercise.main,
-          variant: exercise.variant
-            ? VariantEntity.create({
-                ...exercise.variant,
-                category: ExerciseCategoryEntity.create(exercise.category!),
-              })
-            : null,
-          category: ExerciseCategoryEntity.create(exercise.category!),
-          hasUser: Boolean(exercise.user),
-        })
+          ExerciseEntity.create({
+            ...exercise.main,
+            variant: exercise.variant
+                ? VariantEntity.create({
+                  ...exercise.variant,
+                  category: ExerciseCategoryEntity.create(exercise.category!),
+                })
+                : null,
+            category: ExerciseCategoryEntity.create(exercise.category!),
+            hasUser: Boolean(exercise.user),
+          })
       );
     } catch (error: unknown) {
       console.log(error);
@@ -168,6 +180,7 @@ export class ExerciseRepositoryImpl implements ExerciseRepository {
       throw CustomError.internalServer();
     }
   }
+
   async readExercisesCategories(): Promise<
     ExerciseCategoryEntity[] | CustomError
   > {

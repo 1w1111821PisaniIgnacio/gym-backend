@@ -19,8 +19,9 @@ export abstract class ExerciseRepository {
     createExerciseDescriptionDto: CreateExerciseDescriptionDto
   ): Promise<ExerciseDescriptionEntity | CustomError>;
   abstract readExercises(
-    userId: string,
-    name?: any
+      userId: string,
+      name?: string,
+      categoryId?: number
   ): Promise<ExerciseEntity[] | CustomError>;
   abstract readExercisesCategories(): Promise<
     ExerciseCategoryEntity[] | CustomError

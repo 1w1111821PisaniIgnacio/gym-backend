@@ -3,7 +3,7 @@ version: '3.8'
 services:
   server:
     image: server-entrenaly
-    ports: 
+    ports:
       - 8081:8081
     volumes:
       - .:/usr/src/app

@@ -89,9 +89,12 @@ export class ExerciseController {
   public readExercises = async (req: Request, res: Response) => {
     try {
       const { id } = req.body.user;
-      const { name } = req.query;
+      const { name, category } = req.query;
 
-      const exercises = await this.exerciseRepository.readExercises(id, name);
+      // Asumimos que category ya es un entero, si está presente
+      const categoryId = category !== undefined ? Number(category) : undefined;
+
+      const exercises = await this.exerciseRepository.readExercises(id, name as string, categoryId);
 
       return res.status(200).json(exercises);
     } catch (error) {

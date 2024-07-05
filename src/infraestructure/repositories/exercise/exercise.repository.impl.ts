@@ -144,12 +144,13 @@ export class ExerciseRepositoryImpl implements ExerciseRepository {
             const offset = ((page ?? 1) - 1) * (pageSize ?? 10);
 
             // Obtener el total de ejercicios
-            const totalItemsResult = await
-            db. select({ value: count() }).from(exercises)
+            const totalItemsResult = await db
+                .select({ value: count() })
+                .from(exercises)
+                .leftJoin(variants, and(eq(variants.exerciseId, exercises.id), eq(variants.userId, userId))) // Asegúrate de incluir esta línea
                 .where(and(...conditions));
 
             const totalItems = Number(totalItemsResult[0].value);
-
 
             // Obtener los ejercicios paginados
             const exercisesList = await db
@@ -203,7 +204,6 @@ export class ExerciseRepositoryImpl implements ExerciseRepository {
             throw CustomError.internalServer();
         }
     }
-
 
     async readExercisesCategories(): Promise<
     ExerciseCategoryEntity[] | CustomError

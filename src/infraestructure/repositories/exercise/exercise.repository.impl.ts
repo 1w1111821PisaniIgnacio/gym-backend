@@ -136,9 +136,11 @@ export class ExerciseRepositoryImpl implements ExerciseRepository {
                 );
             }
 
-            if (categoryId !== undefined) {
-                conditions.push(eq(exercises.categoryId, categoryId));
+            if (categoryId) {
+                conditions.push(eq(exercises.categoryId, Number(categoryId)));
             }
+
+            console.log('Conditions:', categoryId);
 
             // Calcular el offset para la paginación
             const offset = ((page ?? 1) - 1) * (pageSize ?? 10);

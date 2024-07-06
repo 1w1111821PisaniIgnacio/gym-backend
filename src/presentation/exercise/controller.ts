@@ -89,12 +89,12 @@ export class ExerciseController {
   public readExercises = async (req: Request, res: Response) => {
     try {
       const { id } = req.body.user;
-      let { name, category, page, pageSize } = req.query;
-      const categoryId = category !== undefined ? Number(category) : undefined;
+      let { name, categoryId, page, pageSize } = req.query;
+      const categoryIdNumber = categoryId !== undefined ? Number(categoryId) : undefined;
       const pageNumber = page !== undefined ? Number(page) : 1;
       const pageSizeNumber = pageSize !== undefined ? Number(pageSize) : 10;
 
-      const exercises = await this.exerciseRepository.readExercises(id, name as string, categoryId, pageNumber, pageSizeNumber);
+      const exercises = await this.exerciseRepository.readExercises(id, name as string, categoryIdNumber, pageNumber, pageSizeNumber);
 
       return res.status(200).json(exercises);
     } catch (error) {
